@@ -14,6 +14,12 @@ function SignOffBlock({ text }) {
       {lines.map((line, i) => {
         const trimmed = line.trim()
         if (!trimmed) return <div key={i} className="h-2" />
+        if (trimmed === 'Sign-off Document') {
+          return <h1 key={i} className="text-center text-xl font-bold text-white my-4">{trimmed}</h1>
+        }
+        if (/^Scenario\s+\d+:/i.test(trimmed)) {
+          return <h2 key={i} className="text-sm font-bold text-brand-light mt-3">{trimmed}</h2>
+        }
         if (trimmed.startsWith('##')) {
           return <h2 key={i} className="text-sm font-bold text-brand-light mt-3">{trimmed.replace(/^#+\s*/, '')}</h2>
         }
@@ -65,7 +71,7 @@ export default function SignOffPage({ setLoading }) {
         created_by:          formData.created_by,
       })
       setSignoffText(result.signoff_text)
-      setSignoffFile(result.excel_file)
+      setSignoffFile(result.docx_file)
 
       addChatMessage('assistant',
         `QA Sign-Off document generated for ${formData.ticket_number || 'the ticket'}. ` +
@@ -98,7 +104,7 @@ export default function SignOffPage({ setLoading }) {
             download
             className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-5 py-2 rounded-xl transition-all"
           >
-            <Download size={15} /> Download Sign-Off Excel
+            <Download size={15} /> Download Sign-Off DOCX
           </a>
         )}
       </div>
@@ -116,20 +122,20 @@ export default function SignOffPage({ setLoading }) {
         >
           <span className="flex items-center gap-2">
             <FileText size={15} />
-            Sign-Off Template (optional)
+            Additional Sign-Off Notes (optional)
           </span>
           {showTemplate ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </button>
         {showTemplate && (
           <div className="px-4 pb-4">
             <p className="text-xs text-slate-500 mb-2">
-              Paste your standard sign-off template. The AI will fill it in while preserving its structure.
+              Add scenario grouping, execution context, or evidence links. The sample DOCX format will be preserved.
             </p>
             <textarea
               value={template}
               onChange={e => setTemplate(e.target.value)}
               rows={8}
-              placeholder="Paste your sign-off template here…&#10;&#10;Example:&#10;Ticket Number: [TICKET]&#10;Module: [MODULE]&#10;Testing Scope: [SCOPE]&#10;Total Test Cases: [TOTAL]&#10;Passed: [PASSED]&#10;Failed: [FAILED]&#10;QA Status: [STATUS]"
+              placeholder="Optional notes to include in the scenario summaries, or video evidence links…"
               className="w-full bg-brand-darkest border border-brand-blue rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-colors resize-none font-mono"
             />
           </div>
@@ -170,21 +176,6 @@ export default function SignOffPage({ setLoading }) {
             </button>
           </div>
           <div className="bg-brand-dark border border-brand-blue/50 rounded-xl p-6 max-h-[60vh] overflow-y-auto">
-            {/* Title bar mimicking the dark-blue template look */}
-            <div className="bg-brand-mid rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-white font-bold text-base">QA Sign-Off Document</p>
-                {formData.ticket_number && (
-                  <p className="text-brand-light text-xs mt-0.5">
-                    {formData.ticket_number} · {formData.module}
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-400">Prepared by</p>
-                <p className="text-sm text-white font-medium">{formData.created_by || '<name>'}</p>
-              </div>
-            </div>
             <SignOffBlock text={signoffText} />
           </div>
         </div>

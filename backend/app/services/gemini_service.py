@@ -500,12 +500,7 @@ def generate_signoff(
     template_text:    str = "",
 ) -> str:
     tc_summary_str = json.dumps(review_summary, indent=2)
-
-    template_instruction = (
-        f"Fill in the following Sign-Off template exactly, replacing placeholders:\n\n{template_text}"
-        if template_text
-        else "Generate a professional QA Sign-Off document with the standard sections."
-    )
+    test_cases_str = json.dumps(reviewed_test_cases, indent=2)
 
     prompt = f"""{SYSTEM_PERSONA}
 
@@ -518,24 +513,28 @@ Requirement Summary: {requirement}
 ## Test Execution Summary:
 {tc_summary_str}
 
-## Instruction:
-{template_instruction}
+## Reviewed Test Cases:
+{test_cases_str}
 
-The sign-off must include:
-- Ticket number, Module, Feature
-- Requirement summary
-- Testing scope
-- Testing performed (types of testing)
-- Total / Passed / Failed / Blocked / Skipped test case counts
-- Defects identified
-- Regression testing status
-- Automation status
-- Known issues
-- QA Observations
-- Final QA Status
-- Sign-off recommendation
+## Additional User Notes (content only; do not change the required format):
+{template_text or "None"}
 
-Return only the document content as plain text / markdown. Do not wrap in code fences.
+## Mandatory Sign-Off Format:
+Use the exact paragraph structure of the provided Signoff_Document_TSTD_2950.docx:
+
+Sign-off Document
+Scenario 1: [Concise scenario title]
+[One paragraph describing the actual verification outcome, matching the execution evidence.]
+Video Evidence: [Add link here]
+Scenario 2: [Concise scenario title]
+[One paragraph describing the actual verification outcome.]
+Video Evidence: [Add link here]
+
+Repeat the three-line scenario block for each distinct tested flow or meaningful result.
+Do not add tables, metadata sections, counts, conclusions, QA recommendations, or other headings.
+Use "Verified that ..." only for passed execution. Describe failures, blocks, and skipped cases accurately.
+Keep the evidence line exactly "Video Evidence: [Add link here]" unless an evidence link is supplied.
+Return only plain text in this format. Do not use Markdown headings, bullets, or code fences.
 """
 
     return _generate([prompt], [])

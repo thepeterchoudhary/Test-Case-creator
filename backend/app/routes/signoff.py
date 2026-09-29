@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from app.services.gemini_service import generate_signoff
-from app.utils.excel_utils import build_signoff_excel
+from app.utils.signoff_utils import build_signoff_docx
 
 router = APIRouter()
 
@@ -35,7 +35,7 @@ class SignOffRequest(BaseModel):
 
 class SignOffResponse(BaseModel):
     signoff_text: str
-    excel_file:   str
+    docx_file:    str
 
 
 @router.post("/", response_model=SignOffResponse)
@@ -55,17 +55,16 @@ async def signoff(req: SignOffRequest):
         raise HTTPException(status_code=500, detail=f"Sign-off generation failed: {str(e)}")
 
     today = date.today().strftime("%Y%m%d")
-    fname = f"signoff_{req.ticket_number or 'QA'}_{today}_{uuid.uuid4().hex[:6]}.xlsx"
+    fname = f"signoff_{req.ticket_number or 'QA'}_{today}_{uuid.uuid4().hex[:6]}.docx"
     output_path = os.path.join(OUTPUT_DIR, fname)
-
-    metadata = {
-        "ticket_number": req.ticket_number,
-        "module":        req.module,
-        "created_by":    req.created_by,
-    }
-    build_signoff_excel(text, metadata, output_path)
+    try:
+        build_signoff_docx(text, output_path)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not build sign-off DOCX: {str(e)}")
 
     return SignOffResponse(
         signoff_text=text,
-        excel_file=f"/outputs/{fname}",
+        docx_file=f"/outputs/{fname}",
     )

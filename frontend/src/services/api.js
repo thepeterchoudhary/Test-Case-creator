@@ -71,7 +71,7 @@ export async function reviewTestCases(payload) {
 // ── Sign-Off ───────────────────────────────────────────────────────────────
 export async function generateSignoff(payload) {
   const { data } = await api.post('/signoff/', payload)
-  return data   // {signoff_text, excel_file}
+  return data   // {signoff_text, docx_file}
 }
 
 // ── Health Check ───────────────────────────────────────────────────────────

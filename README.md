@@ -79,8 +79,8 @@ Step 3 → Review
   AI reviews pass/fail status, corrects test cases, identifies gaps
 
 Step 4 → Sign-Off
-  AI generates QA Sign-Off document from your template
-  Downloads as formatted Excel
+  AI generates the QA Sign-Off from the sample DOCX layout
+  Downloads as a formatted DOCX
 ```
 
 ---
