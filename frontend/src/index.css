@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-darkest: #060f1a;
+  --brand-dark:    #0d2137;
+  --brand-mid:     #0a3d62;
+  --brand-blue:    #1b4f72;
+  --brand-accent:  #2e86c1;
+  --brand-light:   #85c1e9;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', Calibri, sans-serif;
+  background-color: var(--brand-darkest);
+  color: #e8f4fd;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar         { width: 6px; height: 6px; }
+::-webkit-scrollbar-track   { background: #060f1a; }
+::-webkit-scrollbar-thumb   { background: #1b4f72; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2e86c1; }
+
+/* Custom table scroll */
+.tc-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+/* Animate */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeSlideUp 0.4s ease forwards; }
+
+/* Step connector line */
+.step-line {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, #2e86c1, #1b4f72);
+  transform: translateY(-50%);
+}
+
+/* Dropzone */
+.dropzone-active {
+  border-color: #2e86c1 !important;
+  background: rgba(46, 134, 193, 0.08) !important;
+}
+
+/* Priority badges */
+.badge-high   { background: #b71c1c; color: #fff; }
+.badge-medium { background: #e65100; color: #fff; }
+.badge-low    { background: #1b5e20; color: #fff; }
+
+/* Status badges */
+.badge-pass    { background: #1b5e20; color: #fff; }
+.badge-fail    { background: #b71c1c; color: #fff; }
+.badge-blocked { background: #7b1fa2; color: #fff; }
+.badge-skipped { background: #e65100; color: #fff; }
+.badge-notrun  { background: #1b4f72; color: #fff; }
+
+/* Prose for sign-off */
+.signoff-content h2 { font-size: 1rem; font-weight: 700; color: #85c1e9; margin: 1rem 0 0.25rem; }
+.signoff-content p  { font-size: 0.875rem; color: #c5d9e8; line-height: 1.6; }
+.signoff-content li { font-size: 0.875rem; color: #c5d9e8; margin-left: 1.25rem; list-style: disc; }
