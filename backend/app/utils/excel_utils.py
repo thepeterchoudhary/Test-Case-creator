@@ -1,18 +1,19 @@
 """
 Excel Utilities
 ---------------
-Generates Excel files matching the test-case format from the screenshot:
-  Row 1-4  : Dark-blue header block (metadata + Test Execution Report)
-  Row 5    : Column headers
-  Row 6+   : Test case data
+Generates test-case workbooks from the provided sample Excel template.
+The sample's five metadata rows, row-6 column headers, and row-7 data layout
+are preserved for both generation and review exports.
 """
 
 import os
-from datetime import date
+from copy import copy
+from datetime import date, datetime
+from pathlib import Path
 
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 
 # ── Palette ────────────────────────────────────────────────────────────────
 DARK_BLUE   = "0D2137"
@@ -29,14 +30,24 @@ STATUS_FILLS = {
     "Pass":    PatternFill("solid", fgColor="C8E6C9"),
     "Fail":    PatternFill("solid", fgColor="FFCDD2"),
     "Blocked": PatternFill("solid", fgColor="FFE0B2"),
-    "Skipped": PatternFill("solid", fgColor="FFF9C4"),
-    "Not Run": PatternFill("solid", fgColor="E3F2FD"),
+    "Skip":    PatternFill("solid", fgColor="FFF9C4"),
+    "NOT RUN": PatternFill("solid", fgColor="E3F2FD"),
 }
 PRIORITY_FILLS = {
-    "High":   PatternFill("solid", fgColor="FFCDD2"),
-    "Medium": PatternFill("solid", fgColor="FFF9C4"),
-    "Low":    PatternFill("solid", fgColor="C8E6C9"),
+    "P1": PatternFill("solid", fgColor="FFCDD2"),
+    "P2": PatternFill("solid", fgColor="FFF9C4"),
+    "P3": PatternFill("solid", fgColor="C8E6C9"),
 }
+
+SAMPLE_TEMPLATE = (
+    Path(__file__).resolve().parents[3]
+    / "samples"
+    / "TSTD-2950-test-cases (4).xlsx"
+)
+HEADER_ROW = 6
+DATA_START_ROW = HEADER_ROW + 1
+SAMPLE_STATUS_VALUES = ("NOT RUN", "Pass", "Fail", "Skip", "Blocked")
+SAMPLE_PRIORITY_VALUES = ("P1", "P2", "P3")
 
 # 11 data columns
 COLUMNS = [
@@ -191,70 +202,85 @@ def build_test_case_excel(
     metadata:   dict,
     output_path: str,
 ) -> str:
-    wb = openpyxl.Workbook()
+    if not SAMPLE_TEMPLATE.is_file():
+        raise FileNotFoundError(f"Test case template not found: {SAMPLE_TEMPLATE}")
+
+    wb = openpyxl.load_workbook(SAMPLE_TEMPLATE)
     ws = wb.active
-    ws.title = "Test Cases"
+    today = date.today()
+    ticket = metadata.get("ticket_number", "")
+    module = metadata.get("module", "")
+    created_by = metadata.get("created_by", "")
 
-    # Row heights
-    for r in range(1, 5):
-        ws.row_dimensions[r].height = 22
-    ws.row_dimensions[5].height = 20
+    # Keep the sample workbook's metadata header, merges, formulas and layout.
+    ws["B1"] = ticket or module
+    ws["D1"] = module
+    ws["B2"] = created_by
+    ws["D2"] = metadata.get("version", "1")
+    ws["B3"] = datetime.combine(today, datetime.min.time())
+    ws["B4"] = created_by
+    ws["D4"] = metadata.get("executed_at", "")
+    ws["B5"] = today.strftime("%m/%d/%Y")
+    ws["D5"] = metadata.get("executed_by", created_by)
 
-    # Column widths
-    for idx, (_, width) in enumerate(COLUMNS, start=1):
-        ws.column_dimensions[get_column_letter(idx)].width = width
+    last_data_row = max(HEADER_ROW + len(test_cases), DATA_START_ROW)
+    formula_end_row = max(last_data_row, 39)
+    for cell, status in zip(("F1", "G1", "H1", "I1", "J1"), SAMPLE_STATUS_VALUES):
+        ws[cell] = f'=COUNTIF(G{DATA_START_ROW}:G{formula_end_row},"{status}")'
 
-    # Build the 4-row header
-    _build_header(ws, metadata, test_cases)
+    # Remove example cases but retain the template's preformatted rows.
+    for row_idx in range(DATA_START_ROW, ws.max_row + 1):
+        for col_idx in range(1, NUM_COLS + 1):
+            ws.cell(row=row_idx, column=col_idx).value = None
 
-    # ── ROW 5 – column headers ─────────────────────────────────────────────
-    for col_idx, (col_name, _) in enumerate(COLUMNS, start=1):
-        c = ws.cell(row=5, column=col_idx, value=col_name)
-        c.fill      = _fill(COL_HEADER)
-        c.font      = _font(bold=True, size=10)
-        c.alignment = _align(h="center")
-        c.border    = _thin_border()
+    for row_idx in range(DATA_START_ROW, last_data_row + 1):
+        if row_idx > ws.max_row:
+            for col_idx in range(1, NUM_COLS + 1):
+                source = ws.cell(row=DATA_START_ROW, column=col_idx)
+                target = ws.cell(row=row_idx, column=col_idx)
+                if source.has_style:
+                    target._style = copy(source._style)
+            ws.row_dimensions[row_idx].height = ws.row_dimensions[DATA_START_ROW].height
 
-    # ── ROWS 6+ – test case data ───────────────────────────────────────────
-    for row_idx, tc in enumerate(test_cases, start=6):
-        ws.row_dimensions[row_idx].height = 60
+    ws.data_validations.dataValidation = []
+    status_validation = DataValidation(
+        type="list", formula1='"Pass,NOT RUN,Skip,Fail,Blocked"', allow_blank=True
+    )
+    ws.add_data_validation(status_validation)
+    status_validation.add(f"G{DATA_START_ROW}:G{formula_end_row}")
 
-        status   = tc.get("status",   "Not Run")
-        priority = tc.get("priority", "Medium")
-        row_fill = STATUS_FILLS.get(status, _fill(LIGHT_GRAY))
+    status_aliases = {
+        "NOT RUN": "NOT RUN", "NOTRUN": "NOT RUN",
+        "SKIP": "Skip", "SKIPPED": "Skip",
+    }
+    priority_aliases = {"HIGH": "P1", "MEDIUM": "P2", "LOW": "P3"}
+    for index, tc in enumerate(test_cases, start=1):
+        row_idx = DATA_START_ROW + index - 1
+        status_raw = str(tc.get("status", "NOT RUN")).strip()
+        status = status_aliases.get(status_raw.upper(), status_raw.title())
+        if status not in SAMPLE_STATUS_VALUES:
+            status = "NOT RUN"
+
+        priority_raw = str(tc.get("priority", "P2")).strip()
+        priority = priority_aliases.get(priority_raw.upper(), priority_raw.upper())
+        if priority not in SAMPLE_PRIORITY_VALUES:
+            priority = "P2"
 
         values = [
-            tc.get("test_case_id",         f"TC_{row_idx - 5:03d}"),
-            tc.get("title",                ""),
+            tc.get("test_case_id") or f"TC_{index:03d}",
+            tc.get("title", ""),
             tc.get("description_scenario", ""),
-            tc.get("precondition",         ""),
-            tc.get("test_steps",           ""),
-            tc.get("expected_results",     ""),
+            tc.get("precondition", ""),
+            tc.get("test_steps", ""),
+            tc.get("expected_results", ""),
             status,
-            tc.get("actual_results",       ""),
-            tc.get("bug_ticket_link",      ""),
+            tc.get("actual_results", ""),
+            tc.get("bug_ticket_link", ""),
             priority,
-            tc.get("remarks",              ""),
+            tc.get("remarks", ""),
         ]
-
-        for col_idx, val in enumerate(values, start=1):
-            c = ws.cell(row=row_idx, column=col_idx, value=val)
-            c.fill      = row_fill
-            c.font      = Font(name="Calibri", size=10, color="000000")
-            c.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-            c.border    = _thin_border()
-
-            if col_idx == 7:   # Status
-                c.font      = Font(name="Calibri", size=10, bold=True, color="000000")
-                c.alignment = Alignment(horizontal="center", vertical="top")
-
-            if col_idx == 10:  # Priority
-                c.fill      = PRIORITY_FILLS.get(priority, row_fill)
-                c.font      = Font(name="Calibri", size=10, bold=True, color="000000")
-                c.alignment = Alignment(horizontal="center", vertical="top")
-
-    ws.freeze_panes = "A6"
-    ws.auto_filter.ref = f"A5:{get_column_letter(NUM_COLS)}5"
+        for col_idx, value in enumerate(values, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     wb.save(output_path)

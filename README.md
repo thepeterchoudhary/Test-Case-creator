@@ -87,7 +87,8 @@ Step 4 → Sign-Off
 
 ## Excel Format
 
-The generated Excel matches the exact format from your screenshot:
+Generated and reviewed Excel files use the exact structure and layout of the
+workbook in `samples/TSTD-2950-test-cases (4).xlsx`:
 
 | Column | Description |
 |--------|-------------|
@@ -97,13 +98,15 @@ The generated Excel matches the exact format from your screenshot:
 | Precondition | Required setup |
 | Test steps | Numbered steps |
 | Expected results | Precise, measurable outcome |
-| Status | Not Run / Pass / Fail / Blocked / Skipped |
+| Status | NOT RUN / Pass / Fail / Blocked / Skip |
 | Actual results | What actually happened |
 | Bug ticket link | Link to defect |
-| Priority | High / Medium / Low |
+| Priority | P1 / P2 / P3 |
 | Remarks | Notes or review comments |
 
-Header section includes: Created by, Created at, Module, Version, Test Execution Report summary.
+The template's five metadata rows, exact column order, execution summary, formatting,
+and dropdown values are preserved. New cases start as `NOT RUN` and receive
+sequential IDs (`TC_001`, `TC_002`, …).
 
 ---
 

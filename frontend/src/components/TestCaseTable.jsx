@@ -2,16 +2,16 @@ import React, { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Search, Filter } from 'lucide-react'
 
 const PRIORITY_CLASS = {
-  High:   'badge-high',
-  Medium: 'badge-medium',
-  Low:    'badge-low',
+  P1: 'badge-high',
+  P2: 'badge-medium',
+  P3: 'badge-low',
 }
 const STATUS_CLASS = {
   Pass:    'badge-pass',
   Fail:    'badge-fail',
   Blocked: 'badge-blocked',
-  Skipped: 'badge-skipped',
-  'Not Run': 'badge-notrun',
+  Skip:    'badge-skipped',
+  'NOT RUN': 'badge-notrun',
 }
 
 function Badge({ text, classMap }) {
@@ -116,7 +116,7 @@ export default function TestCaseTable({ testCases = [], editable = false, onUpda
           className="bg-brand-dark border border-brand-blue rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-accent"
         >
           <option value="All">All Priorities</option>
-          <option>High</option><option>Medium</option><option>Low</option>
+          <option>P1</option><option>P2</option><option>P3</option>
         </select>
         <select
           value={filterStatus}
@@ -124,8 +124,8 @@ export default function TestCaseTable({ testCases = [], editable = false, onUpda
           className="bg-brand-dark border border-brand-blue rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-accent"
         >
           <option value="All">All Statuses</option>
-          <option>Not Run</option><option>Pass</option><option>Fail</option>
-          <option>Blocked</option><option>Skipped</option>
+          <option>NOT RUN</option><option>Pass</option><option>Fail</option>
+          <option>Blocked</option><option>Skip</option>
         </select>
         <span className="text-xs text-slate-500">{filtered.length} / {testCases.length} cases</span>
       </div>
@@ -156,15 +156,15 @@ export default function TestCaseTable({ testCases = [], editable = false, onUpda
                       ) : col.key === 'status' ? (
                         editable ? (
                           <select
-                            value={tc.status || 'Not Run'}
+                            value={tc.status || 'NOT RUN'}
                             onChange={e => handleStatusChange(idx, e.target.value)}
                             className="bg-brand-dark border border-brand-blue rounded px-2 py-0.5 text-xs text-slate-300 w-full focus:outline-none"
                           >
-                            <option>Not Run</option><option>Pass</option>
-                            <option>Fail</option><option>Blocked</option><option>Skipped</option>
+                            <option>NOT RUN</option><option>Pass</option>
+                            <option>Fail</option><option>Blocked</option><option>Skip</option>
                           </select>
                         ) : (
-                          <Badge text={tc.status || 'Not Run'} classMap={STATUS_CLASS} />
+                          <Badge text={tc.status || 'NOT RUN'} classMap={STATUS_CLASS} />
                         )
                       ) : col.key === 'actual_results' && editable ? (
                         <textarea

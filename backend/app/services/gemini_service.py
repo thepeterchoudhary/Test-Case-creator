@@ -283,6 +283,32 @@ SYSTEM_PERSONA = (
 # Public API
 # ---------------------------------------------------------------------------
 
+def _normalize_generated_test_cases(test_cases: list[dict]) -> list[dict]:
+    """Return generated cases using only the sample workbook's 11 fields."""
+    priority_aliases = {"HIGH": "P1", "MEDIUM": "P2", "LOW": "P3"}
+    normalized = []
+    for index, case in enumerate(test_cases, start=1):
+        if not isinstance(case, dict):
+            continue
+        priority = str(case.get("priority", "P2")).strip().upper()
+        priority = priority_aliases.get(priority, priority)
+        if priority not in {"P1", "P2", "P3"}:
+            priority = "P2"
+        normalized.append({
+            "test_case_id": f"TC_{index:03d}",
+            "title": case.get("title", ""),
+            "description_scenario": case.get("description_scenario", ""),
+            "precondition": case.get("precondition", ""),
+            "test_steps": case.get("test_steps", ""),
+            "expected_results": case.get("expected_results", ""),
+            "status": "NOT RUN",
+            "actual_results": "",
+            "bug_ticket_link": case.get("bug_ticket_link", ""),
+            "priority": priority,
+            "remarks": case.get("remarks", ""),
+        })
+    return normalized
+
 def generate_test_cases(
     ticket_number: str,
     requirement:   str,
@@ -328,6 +354,23 @@ Created By: {created_by}
 - Integration (where applicable): API, third-party, notifications
 - Regression: scenarios affected by this change
 
+## Mandatory Test Case Format:
+Use only these 11 fields for each test case, in this exact order. Do not add,
+rename, remove, or reorder fields:
+1. test_case_id (TC_001, TC_002, ...)
+2. title
+3. description_scenario
+4. precondition
+5. test_steps
+6. expected_results
+7. status (always "NOT RUN" for newly generated cases)
+8. actual_results (empty string)
+9. bug_ticket_link (empty string unless a defect link is provided)
+10. priority (P1, P2, or P3 only; P1=highest, P3=lowest)
+11. remarks (empty string unless a concise note is needed)
+The generated Excel must use the supplied sample workbook's layout and exact
+column headings. Do not substitute another test-case format.
+
 ## Output Format (pure JSON, no markdown fences):
 {{
   "test_cases": [
@@ -338,8 +381,11 @@ Created By: {created_by}
       "precondition": "Any required preconditions",
       "test_steps": "1. Step one\\n2. Step two\\n3. Step three",
       "expected_results": "Precise, measurable expected outcome",
-      "priority": "High|Medium|Low",
-      "category": "Functional|UI|Boundary|Security|Integration|Regression|Error Handling|Data Validation"
+    "status": "NOT RUN",
+    "actual_results": "",
+    "bug_ticket_link": "",
+    "priority": "P1|P2|P3",
+    "remarks": ""
     }}
   ],
   "summary": {{
@@ -355,6 +401,8 @@ Created By: {created_by}
 
 Rules:
 - test_case_id format: TC_001, TC_002, ...
+- Use only the 11 test-case fields and exact order listed above
+- Status must be NOT RUN; priority must be P1, P2, or P3
 - Each test case must be clear, unique, atomic, reproducible, and professionally written
 - Expected results must be specific – never write "system should work correctly"
 - Output ONLY the JSON object, no other text, no markdown fences
@@ -364,7 +412,7 @@ Rules:
 
     parsed = _parse_json_response(raw)
     return {
-        "test_cases":   parsed.get("test_cases", []),
+        "test_cases":   _normalize_generated_test_cases(parsed.get("test_cases", [])),
         "summary":      parsed.get("summary", {}),
         "raw_response": raw,
     }
@@ -408,10 +456,10 @@ def review_test_cases(
       "precondition": "...",
       "test_steps": "...",
       "expected_results": "...",
-      "status": "Pass|Fail|Blocked|Skipped|Not Run",
+    "status": "Pass|Fail|Blocked|Skip|NOT RUN",
       "actual_results": "...",
       "bug_ticket_link": "",
-      "priority": "High|Medium|Low",
+    "priority": "P1|P2|P3",
       "remarks": "Review comment or correction note",
       "review_action": "No Change|Modified|Added|Flagged",
       "review_comments": "Detailed review comments"
